@@ -30,7 +30,7 @@ if(DNNL_BLAS_VENDOR STREQUAL "NONE")
     return()
 endif()
 
-if (NOT "${DNNL_BLAS_VENDOR}" MATCHES "^(NONE|MKL|OPENBLAS|ARMPL|ANY)$")
+if (NOT "${DNNL_BLAS_VENDOR}" MATCHES "^(NONE|MKL|OPENBLAS|ARMPL|ACCELERATE|ANY)$")
     message(FATAL_ERROR "Unsupported DNNL_BLAS_VENDOR: ${DNNL_BLAS_VENDOR}.")
 endif()
 
@@ -50,6 +50,8 @@ if(DNNL_BLAS_VENDOR STREQUAL "MKL")
     set(CBLAS_HEADERS "mkl_cblas.h")
 elseif(DNNL_BLAS_VENDOR STREQUAL "OPENBLAS")
     set(BLA_VENDOR "OpenBLAS")
+elseif(DNNL_BLAS_VENDOR STREQUAL "ACCELERATE")
+    set(BLA_VENDOR "Apple")
 elseif(DNNL_BLAS_VENDOR STREQUAL "ARMPL")
     set(CBLAS_HEADERS "armpl.h")
     expect_arch_or_generic("AARCH64")
@@ -64,7 +66,16 @@ find_package(BLAS REQUIRED)
 
 if(BLAS_FOUND)
      set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${BLAS_LINKER_FLAGS}")
-     list(APPEND EXTRA_SHARED_LIBS ${BLAS_LIBRARIES})
+     if (DNNL_BLAS_VENDOR STREQUAL "ACCELERATE")
+         # Install step for Accelerate is handled via config.cmake since it
+         # requires using find_library on macOS for downstream projects,
+         # i.e. only add for build, not for install, as an INTERFACE_LINK_LIBRARIES
+         # target on the IMPORTED DNNL target will break for Accelerate
+         find_library(ACCELERATE_FRAMEWORK Accelerate REQUIRED)
+         list(APPEND EXTRA_SHARED_LIBS_BUILD ${BLAS_LIBRARIES})
+     else()
+         list(APPEND EXTRA_SHARED_LIBS ${BLAS_LIBRARIES})
+     endif()
 
      # Check that the BLAS library supports the CBLAS interface.
      set(CMAKE_REQUIRED_LIBRARIES "${BLAS_LINKER_FLAGS};${BLAS_LIBRARIES}")
@@ -73,7 +84,7 @@ if(BLAS_FOUND)
      # Find and include  accompanying cblas.h
      list(GET BLAS_LIBRARIES 0 FIRST_BLAS_LIB)
      get_filename_component(BLAS_LIB_DIR ${FIRST_BLAS_LIB} PATH)
-     find_path(BLAS_INCLUDE_DIR ${CBLAS_HEADERS} $ENV{CPATH} ${BLAS_LIB_DIR}/../include ${BLAS_LIB_DIR}/../../include)
+     find_path(BLAS_INCLUDE_DIR ${CBLAS_HEADERS} ENV CPATH  ${BLAS_LIB_DIR}/../include ${BLAS_LIB_DIR}/../../include)
      include_directories(${BLAS_INCLUDE_DIR})
 
      # Check we have a working CBLAS interface

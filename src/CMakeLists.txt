@@ -134,7 +134,7 @@ target_include_directories(${DNNL_LIBRARY_NAME} PUBLIC
     )
 
 target_link_libraries_build(${DNNL_LIBRARY_NAME}
-    "${EXTRA_SHARED_LIBS};${EXTRA_STATIC_LIBS}")
+    "${EXTRA_SHARED_LIBS};${EXTRA_SHARED_LIBS_BUILD};${EXTRA_STATIC_LIBS}")
 target_link_libraries_install(${DNNL_LIBRARY_NAME} "${EXTRA_SHARED_LIBS}")
 if(DNNL_LIBRARY_TYPE STREQUAL "STATIC")
     target_link_libraries_install(${DNNL_LIBRARY_NAME} "${EXTRA_STATIC_LIBS}")
